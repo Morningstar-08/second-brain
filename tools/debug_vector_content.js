@@ -1,10 +1,8 @@
 const { QdrantClient } = require("@qdrant/js-client-rest");
 
 // Hardcode for testing
-const qdrantUrl =
-  "https://6ebb2b60-e0b2-469c-a6a9-546edb4cd31f.us-west-1-0.aws.cloud.qdrant.io:6333";
-const qdrantApiKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.vNXXKZblGohMhPkhtQQ1NUi1ZP42nYMaAUFgGauX_8w";
+const qdrantUrl = process.env.QDRANT_URL;
+const qdrantApiKey = process.env.QDRANT_API_KEY;
 const collectionName = "documents";
 
 const qdrantClient = new QdrantClient({
