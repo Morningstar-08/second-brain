@@ -5,7 +5,6 @@ const qdrantUrl = process.env.QDRANT_URL || "http://localhost:6333";
 const qdrantApiKey = process.env.QDRANT_API_KEY;
 const collectionName = "documents";
 
-// Initialize Google Generative AI client
 const genAI = process.env.GOOGLE_API_KEY
   ? new GoogleGenerativeAI(process.env.GOOGLE_API_KEY)
   : null;
@@ -15,10 +14,6 @@ export const qdrantClient = new QdrantClient({
   apiKey: qdrantApiKey,
 });
 
-/**
- * Generate embeddings using Google's Gemini text-embedding-004 model
- * This model produces 768-dimensional embeddings
- */
 async function generateEmbedding(text: string): Promise<number[]> {
   if (!genAI || !process.env.GOOGLE_API_KEY) {
     throw new Error(
@@ -49,11 +44,6 @@ async function generateEmbedding(text: string): Promise<number[]> {
   }
 }
 
-/**
- * Store document chunks with embeddings in Qdrant
- * Each chunk is stored as a separate vector with its content and metadata
- * Uses uploadDate for temporal querying consistency
- */
 export async function storeChunksWithEmbeddings(
   chunks: string[],
   documentId: string,
@@ -161,11 +151,6 @@ export async function storeChunksWithEmbeddings(
   }
 }
 
-/**
- * Search for relevant chunks using vector similarity in Qdrant
- * Uses Gemini text-embedding-004 to generate query embeddings
- * Supports optional temporal filtering
- */
 export async function searchRelevantChunks(
   query: string,
   topK: number = 5,
@@ -278,9 +263,6 @@ export async function searchRelevantChunks(
   }
 }
 
-/**
- * Get collection info to verify configuration
- */
 export async function getCollectionInfo() {
   try {
     const info = await qdrantClient.getCollection(collectionName);
@@ -297,10 +279,6 @@ export async function getCollectionInfo() {
   }
 }
 
-/**
- * Get all unique document IDs with metadata
- * Useful for listing all documents in the system
- */
 export async function getAllDocuments() {
   try {
     // Check if collection exists first
@@ -383,9 +361,6 @@ export async function getAllDocuments() {
   }
 }
 
-/**
- * Delete a document and all its chunks from Qdrant
- */
 export async function deleteDocument(documentId: string) {
   try {
     // Delete all points with matching document_id
@@ -415,9 +390,6 @@ export async function deleteDocument(documentId: string) {
   }
 }
 
-/**
- * Get documents created within a specific time range
- */
 export async function getDocumentsByDateRange(
   dateFrom?: string | Date,
   dateTo?: string | Date
@@ -457,9 +429,6 @@ export async function getDocumentsByDateRange(
   }
 }
 
-/**
- * Convert string ID to numeric ID for Qdrant
- */
 function stringToNumericId(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -470,10 +439,6 @@ function stringToNumericId(str: string): number {
   return Math.abs(hash);
 }
 
-/**
- * Store full document in a separate collection for complete document retrieval
- * This enables the system to work as both a vector DB and a normal document store
- */
 export async function storeFullDocument(
   documentId: string,
   filename: string,
@@ -540,9 +505,6 @@ export async function storeFullDocument(
   }
 }
 
-/**
- * Retrieve full document by ID
- */
 export async function getFullDocument(documentId: string) {
   try {
     const documentsCollectionName = "full_documents";
@@ -573,9 +535,6 @@ export async function getFullDocument(documentId: string) {
   }
 }
 
-/**
- * List all full documents with metadata (without full content for performance)
- */
 export async function listAllFullDocuments() {
   try {
     const documentsCollectionName = "full_documents";

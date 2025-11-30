@@ -8,10 +8,6 @@ interface ChatRequest {
   }>;
 }
 
-/**
- * Main chat endpoint - streams responses from Groq API with document context
- * Searches vector database for relevant chunks and includes them in the prompt
- */
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
@@ -39,13 +35,76 @@ export async function POST(request: NextRequest) {
     // Get the user's latest question to search for relevant documents
     const userQuery = messages[messages.length - 1].content;
 
+    // Extract temporal filters from user query using LLM
+    let dateFilters: { dateFrom?: string; dateTo?: string } = {};
+    try {
+      const extractionPrompt = `Extract any date or time references from this query. Today's date is ${
+        new Date().toISOString().split("T")[0]
+      }.
+
+Query: "${userQuery}"
+
+If the query mentions temporal constraints (e.g., "last week", "uploaded yesterday", "from January", "documents from 2024", "this month"), respond with JSON containing:
+- dateFrom: ISO date string (YYYY-MM-DD) for the start date
+- dateTo: ISO date string (YYYY-MM-DD) for the end date
+
+If no temporal constraint is mentioned, respond with: {}
+
+Examples:
+"documents uploaded last week" -> {"dateFrom": "2024-11-24", "dateTo": "2024-12-01"}
+"files from yesterday" -> {"dateFrom": "2024-11-30", "dateTo": "2024-12-01"}
+"uploaded in January 2024" -> {"dateFrom": "2024-01-01", "dateTo": "2024-01-31"}
+"what did I upload?" -> {}
+
+Respond with ONLY the JSON object, nothing else.`;
+
+      const extractionResponse = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [{ role: "user", content: extractionPrompt }],
+            temperature: 0.1,
+            max_tokens: 150,
+          }),
+        }
+      );
+
+      if (extractionResponse.ok) {
+        const extractionData = await extractionResponse.json();
+        const extractedText =
+          extractionData.choices?.[0]?.message?.content?.trim() || "{}";
+
+        // Clean up the response to extract just the JSON
+        const jsonMatch = extractedText.match(/\{[^}]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (parsed.dateFrom || parsed.dateTo) {
+            dateFilters = parsed;
+            console.log("Extracted temporal filters:", dateFilters);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn("Failed to extract temporal filters:", error);
+      // Continue without temporal filters
+    }
+
     // Search for relevant document chunks from vector database
     let relevantContext = "";
     try {
+      const searchOptions =
+        Object.keys(dateFilters).length > 0 ? dateFilters : undefined;
+
       const chunks = (await searchRelevantChunks(
         userQuery,
         5,
-        undefined,
+        searchOptions,
         true
       )) as any[];
       if (chunks.length > 0) {
@@ -62,7 +121,11 @@ export async function POST(request: NextRequest) {
           return `[Source: ${sourceType} - ${chunk.filename}]\n${chunk.content}`;
         });
         relevantContext = contextParts.join("\n\n---\n\n");
-        console.log(`Found ${chunks.length} relevant chunks for query`);
+        console.log(
+          `Found ${chunks.length} relevant chunks for query${
+            searchOptions ? " (with temporal filters)" : ""
+          }`
+        );
       }
     } catch (error) {
       console.warn("Vector search failed, continuing without context:", error);
@@ -70,14 +133,47 @@ export async function POST(request: NextRequest) {
     }
 
     // Build system message with context if available
-    let systemMessage = "You are a helpful AI assistant.";
+    let systemMessage = `
+You are Second Brain — an advanced AI assistant designed to retrieve, reason over, and connect information across the user's entire knowledge base.
+
+Your capabilities:
+- Retrieve and use context from the user’s documents, including temporal information (timestamps, chronology, historical sequences, dated notes).
+- Link insights across multiple documents, even when they are related indirectly.
+- Synthesize information into clear, structured, actionable responses.
+- Ground all answers in the retrieved context whenever relevant.
+- If the retrieved context does NOT contain relevant information, fall back to general knowledge — but explicitly state that the stored context was not useful.
+- Avoid hallucinations at all costs; do not invent facts not supported by context or general knowledge.
+- If the user's question is ambiguous or missing detail, request clarification.
+
+Answer format:
+- Be precise, logical, and concise.
+- When using context, reference or restate the relevant parts clearly.
+- Preserve chronology when answering temporal questions.
+- Provide deeper insights when multiple documents relate to the query.
+- If delivering a complex answer, use headings, bullet points, or numbered steps for clarity.
+`;
+
     if (relevantContext) {
-      systemMessage = `You are a helpful AI assistant. Use the following context from the user's documents to answer their questions accurately. If the context doesn't contain relevant information, you can use your general knowledge.
+      systemMessage = `
+You are Second Brain — an advanced AI assistant designed to retrieve, reason over, and connect information across the user's personal knowledge base.
+
+Use the following context extracted from the user’s documents to answer the question as accurately and insightfully as possible. 
+If the context contains relevant information, you MUST ground your answer in it. 
+If the context is irrelevant or insufficient, say so clearly and then rely on your general knowledge.
 
 Context from documents:
 ${relevantContext}
 
-Now answer the user's question based on this context.`;
+Instructions for reasoning:
+- Identify temporal signals (dates, timestamps, sequence markers) and use them when relevant.
+- Link related concepts across different documents.
+- Avoid hallucinations; do not fabricate information not found in context or your general world knowledge.
+- Produce a structured, helpful answer with clear reasoning.
+- If multiple interpretations are possible, present them and explain the differences.
+- If the question is unclear, ask the user to clarify.
+
+Now answer the user’s question using the above context and reasoning guidelines.
+`;
     }
 
     // Prepare messages with system prompt
