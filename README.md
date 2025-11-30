@@ -14,11 +14,13 @@ A foundational prototype for a personal AI companion that can ingest, understand
 ## Architecture
 
 ### Backend Services
+
 - **`/api/ingest`**: Processes documents (PDF/Text) with text splitting and chunking
 - **`/api/transcribe`**: Converts audio to text using OpenAI Whisper API
 - **`/api/chat`**: Q&A endpoint with LLM integration and streaming responses
 
 ### Frontend
+
 - **Chat Interface**: Real-time chat with token-by-token streaming
 - **Document Upload**: Sidebar for uploading documents and audio
 - **Message Display**: Beautiful message bubbles with user/assistant differentiation
@@ -111,9 +113,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## API Endpoints
 
 ### POST `/api/ingest`
+
 Processes and stores documents for retrieval.
 
 **Request:**
+
 ```json
 {
   "content": "base64-encoded file content",
@@ -123,12 +127,15 @@ Processes and stores documents for retrieval.
 ```
 
 ### POST `/api/transcribe`
+
 Converts audio to text using Whisper API.
 
 **Request:** (FormData)
+
 - `file`: Audio file (WAV, MP3, M4A, etc.)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -138,14 +145,14 @@ Converts audio to text using Whisper API.
 ```
 
 ### POST `/api/chat`
+
 Generates AI responses with streaming.
 
 **Request:**
+
 ```json
 {
-  "messages": [
-    { "role": "user", "content": "Your question" }
-  ],
+  "messages": [{ "role": "user", "content": "Your question" }],
   "context": "Optional retrieved context from knowledge base"
 }
 ```
@@ -196,15 +203,19 @@ second-brain/
 ## Troubleshooting
 
 ### "Cannot find module '@langchain/textsplitters'"
+
 Ensure you've installed all dependencies:
+
 ```bash
 npm install
 ```
 
 ### "OPENAI_API_KEY is not set"
+
 Check that your `.env.local` file has the correct API key and it's accessible to the application.
 
 ### Audio transcription fails
+
 - Ensure the audio file is under 25 MB
 - Use a supported format (WAV, MP3, M4A, FLAC, OGG)
 - Verify your OpenAI API key has Whisper access
@@ -226,6 +237,7 @@ npm start
 ```
 
 Or deploy directly to Vercel:
+
 - Push to GitHub
 - Connect to Vercel at https://vercel.com
 - Add environment variables in Vercel dashboard
