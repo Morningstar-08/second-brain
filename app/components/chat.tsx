@@ -33,6 +33,7 @@ export default function ChatUI() {
   const [generatingSummary, setGeneratingSummary] = useState<string | null>(
     null
   );
+  const [deletingDocument, setDeletingDocument] = useState<string | null>(null);
   const [urlInput, setUrlInput] = useState("");
   const [isScrapingUrl, setIsScrapingUrl] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -414,6 +415,50 @@ export default function ChatUI() {
     }
   };
 
+  const handleDeleteDocument = async (
+    docId: string,
+    filename: string
+  ): Promise<void> => {
+    if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
+      return;
+    }
+
+    setDeletingDocument(docId);
+
+    try {
+      const response = await fetch(`/api/documents/${docId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete document");
+      }
+
+      // Remove from local state
+      setUploadedDocuments((prev) =>
+        prev.filter((doc) => doc.documentId !== docId)
+      );
+
+      // Remove summary if exists
+      setSummaries((prev) => {
+        const newSummaries = { ...prev };
+        delete newSummaries[docId];
+        return newSummaries;
+      });
+
+      setUploadProgress(`Deleted "${filename}"`);
+      setTimeout(() => setUploadProgress(""), 3000);
+    } catch (error) {
+      console.error("Delete error:", error);
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      setUploadProgress(`Failed to delete: ${errorMsg}`);
+      setTimeout(() => setUploadProgress(""), 8000);
+    } finally {
+      setDeletingDocument(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -591,17 +636,37 @@ export default function ChatUI() {
                       <div className="text-neutral-500 text-[10px] mt-1">
                         {new Date(doc.uploadDate).toLocaleString()}
                       </div>
-                      <button
-                        onClick={() =>
-                          handleGenerateSummary(doc.documentId, doc.filename)
-                        }
-                        disabled={generatingSummary === doc.documentId}
-                        className="mt-2 bg-neutral-700 hover:bg-neutral-600 disabled:bg-neutral-800 disabled:cursor-not-allowed text-neutral-100 px-3 py-1 rounded-sm text-[11px] w-full transition-colors border border-neutral-600"
-                      >
-                        {generatingSummary === doc.documentId
-                          ? "Summarizing…"
-                          : "Generate Summary"}
-                      </button>
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() =>
+                            handleGenerateSummary(doc.documentId, doc.filename)
+                          }
+                          disabled={
+                            generatingSummary === doc.documentId ||
+                            deletingDocument === doc.documentId
+                          }
+                          className="flex-1 bg-neutral-700 hover:bg-neutral-600 disabled:bg-neutral-800 disabled:cursor-not-allowed text-neutral-100 px-3 py-1 rounded-sm text-[11px] transition-colors border border-neutral-600"
+                        >
+                          {generatingSummary === doc.documentId
+                            ? "Summarizing…"
+                            : "Summary"}
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleDeleteDocument(doc.documentId, doc.filename)
+                          }
+                          disabled={
+                            deletingDocument === doc.documentId ||
+                            generatingSummary === doc.documentId
+                          }
+                          className="bg-red-700/80 hover:bg-red-600 disabled:bg-neutral-800 disabled:cursor-not-allowed text-neutral-100 px-3 py-1 rounded-sm text-[11px] transition-colors border border-red-600/50"
+                          title="Delete document"
+                        >
+                          {deletingDocument === doc.documentId
+                            ? "..."
+                            : "Delete"}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

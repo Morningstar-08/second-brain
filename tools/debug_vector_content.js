@@ -12,9 +12,8 @@ const qdrantClient = new QdrantClient({
 
 async function debugVectorContent() {
   try {
-    console.log("📊 Fetching sample chunks from vector database...\n");
+    console.log("Fetching sample chunks from vector database...\n");
 
-    // Scroll through some points
     const scrollResult = await qdrantClient.scroll(collectionName, {
       limit: 3,
       with_payload: true,
@@ -22,11 +21,11 @@ async function debugVectorContent() {
     });
 
     if (!scrollResult.points || scrollResult.points.length === 0) {
-      console.log("❌ No chunks found in the database");
+      console.log("No chunks found in the database");
       return;
     }
 
-    console.log(`✅ Found ${scrollResult.points.length} chunks\n`);
+    console.log(`Found ${scrollResult.points.length} chunks\n`);
 
     scrollResult.points.forEach((point, index) => {
       console.log(`\n--- Chunk ${index + 1} ---`);
@@ -58,7 +57,7 @@ async function debugVectorContent() {
       }
     });
   } catch (error) {
-    console.error("❌ Error:", error);
+    console.error("Error:", error);
   }
 }
 

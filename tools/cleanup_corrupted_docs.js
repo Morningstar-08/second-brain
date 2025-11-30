@@ -13,17 +13,16 @@ const qdrantClient = new QdrantClient({
 
 async function cleanupCorruptedDocuments() {
   try {
-    console.log("🧹 Starting cleanup of corrupted documents...\n");
+    console.log("Starting cleanup of corrupted documents...\n");
 
     const collectionName = "documents";
     const fullDocsCollection = "full_documents";
 
-    // Get all points from both collections
     let allChunks = [];
     let offset = null;
     let hasMore = true;
 
-    console.log("📊 Fetching all chunks...");
+    console.log("Fetching all chunks...");
     while (hasMore && allChunks.length < 10000) {
       const scrollResult = await qdrantClient.scroll(collectionName, {
         limit: 100,
@@ -41,7 +40,7 @@ async function cleanupCorruptedDocuments() {
       }
     }
 
-    console.log(`✅ Found ${allChunks.length} total chunks\n`);
+    console.log(`Found ${allChunks.length} total chunks\n`);
 
     // Identify corrupted chunks (those with control characters indicating binary data)
     const corruptedDocIds = new Set();
@@ -67,9 +66,8 @@ async function cleanupCorruptedDocuments() {
       console.log(`  - ${docId}`);
     }
 
-    console.log("\n🗑️  Deleting corrupted documents...");
+    console.log("\nDeleting corrupted documents...");
 
-    // Collect all point IDs to delete
     const pointIdsToDelete = [];
     for (const chunk of allChunks) {
       if (corruptedDocIds.has(chunk.payload?.document_id)) {
@@ -79,7 +77,6 @@ async function cleanupCorruptedDocuments() {
 
     console.log(`  Found ${pointIdsToDelete.length} chunk points to delete`);
 
-    // Delete chunks in batches
     const batchSize = 100;
     for (let i = 0; i < pointIdsToDelete.length; i += batchSize) {
       const batch = pointIdsToDelete.slice(i, i + batchSize);
@@ -87,7 +84,7 @@ async function cleanupCorruptedDocuments() {
         points: batch,
       });
       console.log(
-        `  ✅ Deleted batch ${Math.floor(i / batchSize) + 1} (${
+        `  Deleted batch ${Math.floor(i / batchSize) + 1} (${
           batch.length
         } points)`
       );
@@ -124,10 +121,10 @@ async function cleanupCorruptedDocuments() {
         await qdrantClient.delete(fullDocsCollection, {
           points: fullDocIdsToDelete,
         });
-        console.log(`  ✅ Deleted ${fullDocIdsToDelete.length} full documents`);
+        console.log(`  Deleted ${fullDocIdsToDelete.length} full documents`);
       }
     } catch (e) {
-      console.log(`  ⚠️  Could not delete from full_documents: ${e.message}`);
+      console.log(`  Could not delete from full_documents: ${e.message}`);
     }
 
     console.log(

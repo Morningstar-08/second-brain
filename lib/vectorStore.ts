@@ -178,6 +178,15 @@ export async function searchRelevantChunks(
   includeMetadata: boolean = false
 ) {
   try {
+    // Check if collection exists first
+    try {
+      await qdrantClient.getCollection(collectionName);
+    } catch (e) {
+      // Collection doesn't exist yet - return empty results
+      console.log(`Collection "${collectionName}" doesn't exist yet`);
+      return includeMetadata ? [] : [];
+    }
+
     // Generate embedding for the query using the same Gemini model
     const queryEmbedding = await generateEmbedding(query);
 
@@ -294,6 +303,19 @@ export async function getCollectionInfo() {
  */
 export async function getAllDocuments() {
   try {
+    // Check if collection exists first
+    try {
+      await qdrantClient.getCollection(collectionName);
+    } catch (e) {
+      // Collection doesn't exist yet - this is normal for new installations
+      console.log(`Collection "${collectionName}" doesn't exist yet`);
+      return {
+        success: true,
+        documents: [],
+        total: 0,
+      };
+    }
+
     const allPoints: any[] = [];
     let offset = null;
     let hasMore = true;
@@ -506,7 +528,7 @@ export async function storeFullDocument(
     });
 
     console.log(
-      `✅ Stored full document: ${filename} (${fileSize} bytes, ${chunkCount} chunks)`
+      `Stored full document: ${filename} (${fileSize} bytes, ${chunkCount} chunks)`
     );
     return { success: true };
   } catch (error: any) {
@@ -557,6 +579,22 @@ export async function getFullDocument(documentId: string) {
 export async function listAllFullDocuments() {
   try {
     const documentsCollectionName = "full_documents";
+
+    // Check if collection exists first
+    let collectionExists = false;
+    try {
+      await qdrantClient.getCollection(documentsCollectionName);
+      collectionExists = true;
+    } catch (e) {
+      // Collection doesn't exist yet - this is normal for new installations
+      console.log(`Collection "${documentsCollectionName}" doesn't exist yet`);
+      return {
+        success: true,
+        documents: [],
+        total: 0,
+      };
+    }
+
     const allPoints: any[] = [];
     let offset = null;
     let hasMore = true;
@@ -616,31 +654,97 @@ export async function deleteFullDocument(documentId: string) {
   try {
     const documentsCollectionName = "full_documents";
 
-    // Delete from full_documents collection using filter (since we use numeric IDs)
-    await qdrantClient.delete(documentsCollectionName, {
-      filter: {
-        must: [
-          {
-            key: "documentId",
-            match: { value: documentId },
-          },
-        ],
-      },
-    });
+    // First, find all points to delete by scrolling and filtering client-side
+    // This avoids the need for server-side filters which require indexes in Qdrant Cloud
 
-    // Delete all chunks from documents collection
-    await qdrantClient.delete(collectionName, {
-      filter: {
-        must: [
-          {
-            key: "document_id",
-            match: { value: documentId },
-          },
-        ],
-      },
-    });
+    // Get full document points
+    let fullDocPoints: any[] = [];
+    let offset = null;
+    let hasMore = true;
 
-    console.log(`✅ Deleted document and chunks: ${documentId}`);
+    try {
+      while (hasMore && fullDocPoints.length < 1000) {
+        const scrollResult = await qdrantClient.scroll(
+          documentsCollectionName,
+          {
+            limit: 100,
+            with_payload: true,
+            with_vector: false,
+            offset: offset,
+          }
+        );
+
+        if (scrollResult.points && scrollResult.points.length > 0) {
+          fullDocPoints.push(...scrollResult.points);
+          offset = scrollResult.next_page_offset;
+          hasMore = !!scrollResult.next_page_offset;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      // Filter client-side to find matching documents
+      const docPointsToDelete = fullDocPoints
+        .filter((p) => p.payload?.documentId === documentId)
+        .map((p) => p.id);
+
+      // Delete full document points by ID
+      if (docPointsToDelete.length > 0) {
+        await qdrantClient.delete(documentsCollectionName, {
+          points: docPointsToDelete,
+        });
+        console.log(`Deleted ${docPointsToDelete.length} full document points`);
+      }
+    } catch (e) {
+      console.log(`Could not delete from full_documents collection:`, e);
+      // Continue to delete chunks even if full doc deletion fails
+    }
+
+    // Get and delete chunk points
+    let chunkPoints: any[] = [];
+    offset = null;
+    hasMore = true;
+
+    try {
+      while (hasMore && chunkPoints.length < 10000) {
+        const scrollResult = await qdrantClient.scroll(collectionName, {
+          limit: 100,
+          with_payload: true,
+          with_vector: false,
+          offset: offset,
+        });
+
+        if (scrollResult.points && scrollResult.points.length > 0) {
+          chunkPoints.push(...scrollResult.points);
+          offset = scrollResult.next_page_offset;
+          hasMore = !!scrollResult.next_page_offset;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      // Filter client-side to find matching chunks
+      const chunkPointsToDelete = chunkPoints
+        .filter((p) => p.payload?.document_id === documentId)
+        .map((p) => p.id);
+
+      // Delete chunk points by ID in batches
+      if (chunkPointsToDelete.length > 0) {
+        const batchSize = 100;
+        for (let i = 0; i < chunkPointsToDelete.length; i += batchSize) {
+          const batch = chunkPointsToDelete.slice(i, i + batchSize);
+          await qdrantClient.delete(collectionName, {
+            points: batch,
+          });
+        }
+        console.log(`Deleted ${chunkPointsToDelete.length} chunk points`);
+      }
+    } catch (e) {
+      console.log(`Could not delete chunks:`, e);
+      throw e;
+    }
+
+    console.log(`Deleted document and chunks: ${documentId}`);
     return {
       success: true,
       message: `Document ${documentId} deleted successfully`,

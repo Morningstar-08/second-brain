@@ -19,7 +19,7 @@ const qdrantApiKey = process.env.QDRANT_API_KEY;
 const collectionName = "documents";
 
 async function migrate() {
-  console.log("🚀 Starting migration to Gemini text-embedding-004...\n");
+  console.log("Starting migration to Gemini text-embedding-004...\n");
 
   const client = new QdrantClient({
     url: qdrantUrl,
@@ -32,46 +32,41 @@ async function migrate() {
     try {
       const info = await client.getCollection(collectionName);
       collectionExists = true;
-      console.log("✓ Found existing collection:", collectionName);
+      console.log("Found existing collection:", collectionName);
       console.log("  Current vector size:", info.config?.params?.vectors?.size);
       console.log("  Points count:", info.points_count);
       console.log("");
     } catch (e) {
-      console.log("✓ No existing collection found\n");
+      console.log("No existing collection found\n");
     }
 
     if (collectionExists) {
-      console.log("⚠️  WARNING: This will delete the existing collection!");
+      console.log("WARNING: This will delete the existing collection!");
       console.log("   You will need to re-upload all your documents.\n");
 
-      // In a real scenario, you might want to add a confirmation prompt here
-      // For now, we'll just proceed with deletion
-
-      console.log("🗑️  Deleting old collection...");
+      console.log("Deleting old collection...");
       await client.deleteCollection(collectionName);
-      console.log("✓ Old collection deleted\n");
+      console.log("Old collection deleted\n");
     }
 
-    // Create new collection with 768-dimensional vectors for Gemini
-    console.log("📦 Creating new collection with 768-dimensional vectors...");
+    console.log("Creating new collection with 768-dimensional vectors...");
     await client.createCollection(collectionName, {
       vectors: {
         size: 768,
         distance: "Cosine",
       },
     });
-    console.log("✓ New collection created successfully!\n");
+    console.log("New collection created successfully!\n");
 
-    // Verify the new collection
     const newInfo = await client.getCollection(collectionName);
-    console.log("✅ Migration complete!");
+    console.log("Migration complete!");
     console.log("   Collection:", collectionName);
     console.log("   Vector dimensions:", newInfo.config?.params?.vectors?.size);
     console.log(
       "   Distance metric:",
       newInfo.config?.params?.vectors?.distance
     );
-    console.log("\n📝 Next steps:");
+    console.log("\nNext steps:");
     console.log(
       "   1. Make sure GOOGLE_API_KEY is set in your .env.local file"
     );
@@ -80,7 +75,7 @@ async function migrate() {
       "   3. Your documents will now use Gemini text-embedding-004 embeddings\n"
     );
   } catch (error) {
-    console.error("❌ Migration failed:", error.message);
+    console.error("Migration failed:", error.message);
     process.exit(1);
   }
 }
