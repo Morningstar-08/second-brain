@@ -1,17 +1,17 @@
-# 🧠 Second Brain - AI Companion
+# Second Brain - AI Companion
 
 A foundational prototype for a personal AI companion that can ingest, understand, and reason about your information. Build a second brain that has perfect memory of everything you've shown it.
 
-## ✨ Features
+## Features
 
-- **📤 Multi-Modal Ingestion**: Upload documents (PDF, text) and audio files
-- **🤖 Intelligent Q&A**: Ask questions about your uploaded content and get AI-powered answers
-- **💾 Perfect Memory**: The system maintains context from all your documents
-- **🔄 Real-time Streaming**: Watch responses appear token-by-token as they're generated
-- **🎨 Clean UI**: Beautiful, responsive chat interface built with Tailwind CSS
-- **⚡ Fast Processing**: Asynchronous pipeline for efficient document processing
+- **Multi-Modal Ingestion**: Upload documents (PDF, text) and audio files
+- **Intelligent Q&A**: Ask questions about your uploaded content and get AI-powered answers
+- **Perfect Memory**: The system maintains context from all your documents
+- **Real-time Streaming**: Watch responses appear token-by-token as they're generated
+- **Clean UI**: Beautiful, responsive chat interface built with Tailwind CSS
+- **Fast Processing**: Asynchronous pipeline for efficient document processing
 
-## 🏗️ Architecture
+## Architecture
 
 ### Backend Services
 - **`/api/ingest`**: Processes documents (PDF/Text) with text splitting and chunking
@@ -23,7 +23,7 @@ A foundational prototype for a personal AI companion that can ingest, understand
 - **Document Upload**: Sidebar for uploading documents and audio
 - **Message Display**: Beautiful message bubbles with user/assistant differentiation
 
-## 📋 Prerequisites
+## Prerequisites
 
 - Node.js 18+ installed
 - An OpenAI API key (for ChatGPT and Whisper)
@@ -49,7 +49,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 
 Start with a simple LangChain route (`/api/langchain-chat`) that uses your Supabase vectors as a retriever and `ChatOpenAI` as the LLM. This approach keeps retrieval logic separate from model choice so you can later swap OpenAI for Hugging Face or a local model.
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Install Dependencies
 
@@ -86,11 +86,11 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## 📚 Usage
+## Usage
 
 ### Uploading Documents
 
-1. Click the **📤 Upload Content** button
+1. Click the **Upload Content** button
 2. Select your document (PDF, text, or audio)
 3. The system will process and chunk it automatically
 4. Documents are ready for querying
@@ -108,7 +108,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - "Summarize the main ideas from the documents I uploaded"
 - "What did the article say about quantum computing?"
 
-## 🔧 API Endpoints
+## API Endpoints
 
 ### POST `/api/ingest`
 Processes and stores documents for retrieval.
@@ -152,7 +152,7 @@ Generates AI responses with streaming.
 
 **Response:** Streaming text (SSE)
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
 - **Backend**: Next.js API Routes, Node.js
@@ -161,7 +161,7 @@ Generates AI responses with streaming.
 - **Vector Database**: Supabase (optional)
 - **Utilities**: pdf-parse for PDF extraction
 
-## 📦 Project Structure
+## Project Structure
 
 ```
 second-brain/
@@ -183,7 +183,7 @@ second-brain/
 └── .env.local.example
 ```
 
-## 🔜 Future Enhancements
+## Future Enhancements
 
 - [ ] Vector database integration for semantic search
 - [ ] Support for web content ingestion
@@ -193,7 +193,7 @@ second-brain/
 - [ ] Rate limiting and authentication
 - [ ] Advanced document parsing (tables, images)
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### "Cannot find module '@langchain/textsplitters'"
 Ensure you've installed all dependencies:
@@ -209,14 +209,14 @@ Check that your `.env.local` file has the correct API key and it's accessible to
 - Use a supported format (WAV, MP3, M4A, FLAC, OGG)
 - Verify your OpenAI API key has Whisper access
 
-## 📖 Learn More
+## Learn More
 
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Vercel AI SDK](https://sdk.vercel.ai)
 - [OpenAI API](https://platform.openai.com/docs)
 - [LangChain](https://js.langchain.com)
 
-## 🚀 Deployment
+## Deployment
 
 Deploy your Second Brain on Vercel with one click:
 
@@ -230,10 +230,10 @@ Or deploy directly to Vercel:
 - Connect to Vercel at https://vercel.com
 - Add environment variables in Vercel dashboard
 
-## 📝 License
+## License
 
 MIT License - feel free to use this project for personal or commercial purposes.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Feel free to submit issues and pull requests.
